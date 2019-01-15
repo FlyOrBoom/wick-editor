@@ -40,57 +40,27 @@ import AssetLibrary from './Panels/AssetLibrary/AssetLibrary';
 import CodeEditor from './Panels/CodeEditor/CodeEditor';
 import ModalHandler from './Modals/ModalHandler/ModalHandler';
 import HotKeyInterface from './hotKeyMap';
-import Selection from '../core/Selection';
-import UndoRedo from '../core/UndoRedo';
+import EditorCore from './EditorCore';
 
-class Editor extends Component {
+class EditorGUI extends EditorCore {
   constructor () {
     super();
 
     this.state = {
-      project: null,
-      selection: new Selection(this),
-      undoRedo: new UndoRedo(this),
-      onionSkinEnabled: false,
-      onionSkinSeekForwards: 1,
-      onionSkinSeekBackwards: 1,
-      activeTool: 'cursor',
-      toolSettings: {
-        fillColor: '#ffaabb',
-        strokeColor: '#000',
-        strokeWidth: 1,
-        brushSize: 10,
-        brushSmoothing: 0.9,
-        brushSmoothness: 10,
-        cornerRadius: 0,
-        pressureEnabled: false,
-      },
-      previewPlaying: false,
+      ...this.state,
       inspectorSize: 250,
       codeEditorSize: 0.1,
       timelineSize: 100,
       assetLibrarySize: 150,
-    };
-    this.updateEditorState = this.updateEditorState.bind(this);
+      activeModalName: null,
+    }
 
     // Init hotkeys
     this.hotKeyInterface = new HotKeyInterface(this);
 
-    // Tools
-    this.activateTool = this.activateTool.bind(this);
-    this.createAssets = this.createAssets.bind(this);
-
     // Modals
     this.openModal = this.openModal.bind(this);
     this.closeActiveModal = this.closeActiveModal.bind(this);
-
-    // Preview play
-    this.tickLoopIntervalID = null;
-    this.togglePreviewPlaying = this.togglePreviewPlaying.bind(this);
-    this.startTickLoop = this.startTickLoop.bind(this);
-    this.stopTickLoop = this.stopTickLoop.bind(this);
-    this.canvasRef = React.createRef();
-    this.timelineRef = React.createRef(); // These refs are created so we don't have to update the state (slow) during preview play.
 
     // Resiable panels
     this.RESIZE_THROTTLE_AMOUNT_MS = 10;
@@ -109,23 +79,8 @@ class Editor extends Component {
     this.refocusEditor = this.refocusEditor.bind(this);
   }
 
-  componentWillMount () {
-    this.setState({project: new window.Wick.Project()});
-  }
-
   componentDidMount () {
-    this.state.undoRedo.saveState();
     this.refocusEditor();
-  }
-
-  componentDidUpdate (prevProps, prevState) {
-    if(this.state.previewPlaying && !prevState.previewPlaying) {
-      this.startTickLoop();
-    }
-
-    if(!this.state.previewPlaying && prevState.previewPlaying) {
-      this.stopTickLoop();
-    }
   }
 
   onWindowResize () {
@@ -134,8 +89,8 @@ class Editor extends Component {
   }
 
   onResize (e) {
-    window.Wick.Canvas.resize();
-    window.AnimationTimeline.resize();
+    //window.Wick.Canvas.resize();
+    //window.AnimationTimeline.resize();
   }
 
   onStopResize = ({domElement, component}) => {
@@ -176,23 +131,6 @@ class Editor extends Component {
     });
   }
 
-  updateEditorState (state) {
-    if ((state.project || state.selection) && !state.dontPushToUndoRedoStack) {
-      this.state.undoRedo.saveState();
-    }
-    if(state.activeTool && state.activeTool !== 'cursor') {
-      this.state.selection.selectObjects([]);
-      state.selection = this.state.selection;
-    }
-    this.setState(state);
-  }
-
-  activateTool (tool) {
-    this.updateEditorState({
-      activeTool: tool
-    });
-  }
-
   closeActiveModal () {
     this.openModal(null);
   }
@@ -204,24 +142,6 @@ class Editor extends Component {
       });
     }
     this.refocusEditor();
-  }
-
-  togglePreviewPlaying () {
-    this.setState(prevState => ({
-      previewPlaying: !prevState.previewPlaying,
-    }));
-  }
-
-  startTickLoop () {
-    this.tickLoopIntervalID = setInterval(() => {
-      this.state.project.tick();
-      this.canvasRef.updateCanvas();
-      this.timelineRef.updateAnimationTimelineData();
-    }, 1000 / this.state.project.framerate);
-  }
-
-  stopTickLoop () {
-    clearInterval(this.tickLoopIntervalID);
   }
 
   refocusEditor () {
@@ -406,4 +326,4 @@ class Editor extends Component {
   }
 }
 
-export default DragDropContext(HTML5Backend)(Editor)
+export default DragDropContext(HTML5Backend)(EditorGUI)
