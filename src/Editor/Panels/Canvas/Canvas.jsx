@@ -68,6 +68,7 @@ class Canvas extends Component {
       canvasContainerElem.children[0].focus();
     }
 
+    window.paper.drawingTools.setup();
     window.paper.drawingTools.onCanvasModified(this.onCanvasModified);
     window.paper.drawingTools.onSelectionChanged(this.onSelectionChanged);
     window.paper.drawingTools.onCanvasViewChanged(this.onCanvasViewChanged);
@@ -90,8 +91,9 @@ class Canvas extends Component {
     let project = this.props.project;
 
     project.selection.clear();
-    paper.project.selection.items.forEach(item => {
+    e.items.forEach(item => {
       let object = project.getChildByUUID(item.data.wickUUID);
+      if(!object) return;
       project.selection.select(object);
     });
 
