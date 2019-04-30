@@ -235,6 +235,9 @@ Wick.View.Project = class extends Wick.View {
      */
     applyChanges () {
         if(this.renderMode !== 'svg') return;
+
+        this.model.selection.view.applyChanges();
+
         this.model.focus.timeline.activeFrames.forEach(frame => {
             frame.view.applyChanges();
         });
@@ -326,31 +329,6 @@ Wick.View.Project = class extends Wick.View {
                 this.applyChanges();
                 this.fireEvent('canvasModified', e);
             });
-            tool.on('selectionChanged', (e) => {
-                // Optimization: Only fire selectionChanged if the selection... actually changed. (duh.)
-                var currentUUIDs = this.model.selection.getSelectedObjectUUIDs()
-                var newUUIDs = e.items.map(item => {
-                    return item.data.wickUUID
-                });
-                if(!this._uuidsAreDifferent(currentUUIDs, newUUIDs)) {
-                    return;
-                }
-
-                // We're done with the current selection, so apply the transforms done to the selected objects
-                this.applyChanges();
-
-                // Load new selected objects from paper.js items to wick UUIDs
-                this.model.selection.clear();
-                e.items.forEach(item => {
-                    let object = Wick.ObjectCache.getObjectByUUID(item.data.wickUUID);
-                    this.model.selection.select(object);
-                });
-                this.applyChanges();
-                this.fireEvent('selectionChanged', e);
-            });
-            tool.on('selectionTransformed', (e) => {
-                this.fireEvent('selectionTransformed', e);
-            });
             tool.on('canvasViewTranslated', (e) => {
                 this.model.pan = {
                     x: this.pan.x,
@@ -408,9 +386,6 @@ Wick.View.Project = class extends Wick.View {
     }
 
     _renderSVGCanvas () {
-        // Only render if we just finished a selection
-        if(!this.model.selection.view.selectionDidChange()) return;
-
         this.paper.project.clear();
 
         // Update zoom and pan

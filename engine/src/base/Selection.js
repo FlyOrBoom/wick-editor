@@ -37,17 +37,29 @@ Wick.Selection = class extends Wick.Base {
         super(args);
 
         this._selectedObjectsUUIDs = args.selectedObjects || [];
+        this.transformation = args.transformation || new Wick.Transformation();
     }
 
-    deserialize (data) {
-        super.deserialize(data);
-        this._selectedObjectsUUIDs = data.selectedObjects || [];
-    }
-
+    /**
+     * Convert this object into a simple javascript object.
+     * @param {object} args - options for serializtion (see Wick.Base's serialize method)
+     * @returns {object} the serialized data.
+     */
     serialize (args) {
         var data = super.serialize(args);
         data.selectedObjects = Array.from(this._selectedObjectsUUIDs);
+        data.transformation = this.transformation.value;
         return data;
+    }
+
+    /**
+     * Load serialized data into this object.
+     * @param {object} data - the data to load
+     */
+    deserialize (data) {
+        super.deserialize(data);
+        this._selectedObjectsUUIDs = data.selectedObjects || [];
+        this.transformation = new Wick.Transformation(data.transformation);
     }
 
     get classname () {
@@ -78,9 +90,6 @@ Wick.Selection = class extends Wick.Base {
         }
 
         this._selectedObjectsUUIDs.push(object.uuid);
-
-        // Update the view so that all the selection transform values are updated
-        this.project.view.render();
     }
 
     /**
@@ -91,9 +100,6 @@ Wick.Selection = class extends Wick.Base {
         this._selectedObjectsUUIDs = this._selectedObjectsUUIDs.filter(uuid => {
             return uuid !== object.uuid;
         });
-
-        // Update the view so that all the selection transform values are updated
-        this.project.view.render();
     }
 
     /**
@@ -104,9 +110,6 @@ Wick.Selection = class extends Wick.Base {
         this.project.selection.getSelectedObjects(filter).forEach(object => {
             this.deselect(object);
         });
-
-        // Update the view so that all the selection transform values are updated
-        this.project.view.render();
     }
 
     /**
@@ -191,234 +194,6 @@ Wick.Selection = class extends Wick.Base {
      */
     get numObjects () {
         return this._selectedObjectsUUIDs.length;
-    }
-
-    /**
-     * The X position of the selection. This always uses the top-left corner of the objects.
-     */
-    get x () {
-        return Wick.View.paperScope.selection.x;
-    }
-
-    set x (x) {
-        Wick.View.paperScope.selection.x = x;
-    }
-
-    /**
-     * The Y position of the selection. This always uses the top-left corner of the objects.
-     */
-    get y () {
-        return Wick.View.paperScope.selection.y;
-    }
-
-    set y (y) {
-        Wick.View.paperScope.selection.y = y;
-    }
-
-    /**
-     * The width of the selected objects.
-     */
-    get width () {
-        return Wick.View.paperScope.selection.width;
-    }
-
-    set width (width) {
-        Wick.View.paperScope.selection.width = width;
-    }
-
-    /**
-     * The height of the selected objects.
-     */
-    get height () {
-        return Wick.View.paperScope.selection.height;
-    }
-
-    set height (height) {
-        Wick.View.paperScope.selection.height = height;
-    }
-
-    /**
-     * The X scale of the selected objects.
-     */
-    get scaleX () {
-        return Wick.View.paperScope.selection.scaleX;
-    }
-
-    set scaleX (scaleX) {
-        Wick.View.paperScope.selection.scaleX = scaleX;
-    }
-
-    /**
-     * The Y scale of the selected objects.
-     */
-    get scaleY () {
-        return Wick.View.paperScope.selection.scaleY;
-    }
-
-    set scaleY (scaleY) {
-        Wick.View.paperScope.selection.scaleY = scaleY;
-    }
-
-    /**
-     * The rotation of the selected objects.
-     */
-    get rotation () {
-        return Wick.View.paperScope.selection.rotation;
-    }
-
-    set rotation (rotation) {
-        Wick.View.paperScope.selection.rotation = rotation;
-    }
-
-    /**
-     * The fill color of the selected objects.
-     * Will return an array of multiple colors if the selected objects have different colors.
-     */
-    get fillColor () {
-        return Wick.View.paperScope.selection.fillColor;
-    }
-
-    set fillColor (fillColor) {
-        Wick.View.paperScope.selection.fillColor = fillColor;
-    }
-
-    /**
-     * The stroke width of the selected objects.
-     * Will return an array of multiple values if the selected objects have different stroke widths.
-     */
-    get strokeWidth () {
-        return Wick.View.paperScope.selection.strokeWidth;
-    }
-
-    set strokeWidth (strokeWidth) {
-        Wick.View.paperScope.selection.strokeWidth = strokeWidth;
-    }
-
-    /**
-     * The stroke color of the selected objects.
-     * Will return an array of multiple colors if the selected objects have different colors.
-     */
-    get strokeColor () {
-        return Wick.View.paperScope.selection.strokeColor;
-    }
-
-    set strokeColor (strokeColor) {
-        Wick.View.paperScope.selection.strokeColor = strokeColor;
-    }
-
-    /**
-     * The opacity color of the selected objects.
-     * Will return an array of multiple values if the selected objects have different stroke widths.
-     */
-    get opacity () {
-        return Wick.View.paperScope.selection.opacity;
-    }
-
-    set opacity (opacity) {
-        Wick.View.paperScope.selection.opacity = opacity;
-    }
-
-    /**
-     * The centerpoint of the selected objects.
-     */
-    get center () {
-        return Wick.View.paperScope.selection.center;
-    }
-
-    /**
-     * The identifier of the selection.
-     * If there are multiple objects selected, null is always returned.
-     */
-    get identifier () {
-        if(this.numObjects !== 1) {
-            return null;
-        } else {
-            return this.getSelectedObject().identifier;
-        }
-    }
-
-    set identifier (identifier) {
-        if(this.numObjects === 1) {
-            this.getSelectedObject().identifier = identifier;
-        }
-    }
-
-    /**
-     * The sound attached to the selected object.
-     * If there is no sound, or multiple frames are selected, null is returned.
-     */
-    get sound () {
-        if(this.numObjects !== 1) {
-            return null;
-        } else {
-            return this.getSelectedObject().sound;
-        }
-    }
-
-    set sound (sound) {
-        if(this.numObjects === 1 && this.getSelectedObject() instanceof Wick.Frame) {
-            this.getSelectedObject().sound = sound;
-        }
-    }
-
-    /**
-     * The volume of the sound attached to the selected object.
-     * If there is no sound, or multiple frames are selected, null is returned.
-     */
-    get soundVolume () {
-        if(this.sound) {
-            return this.getSelectedObject().soundVolume;
-        } else {
-            return null;
-        }
-    }
-
-    set soundVolume (soundVolume) {
-        if(this.sound) {
-            this.getSelectedObject().soundVolume = soundVolume;
-        }
-    }
-
-    /**
-     * Flip the selected items horizontally.
-     */
-    flipHorizontally () {
-        Wick.View.paperScope.selection.flipHorizontally();
-    }
-
-    /**
-     * Flip the selected items vertically.
-     */
-    flipVertically () {
-        Wick.View.paperScope.selection.flipVertically();
-    }
-
-    /**
-     * Move all selected items to be behind all other objects.
-     */
-    sendToBack () {
-        Wick.View.paperScope.selection.sendToBack();
-    }
-
-    /**
-     * Move all selected items to be in front of all other objects.
-     */
-    bringToFront () {
-        Wick.View.paperScope.selection.bringToFront();
-    }
-
-    /**
-     * Move all selected items backwards one place.
-     */
-    moveBackwards () {
-        Wick.View.paperScope.selection.moveBackwards();
-    }
-
-    /**
-     * Move all selected items forwards one place.
-     */
-    moveForwards () {
-        Wick.View.paperScope.selection.moveForwards();
     }
 
     _locationOf (object) {

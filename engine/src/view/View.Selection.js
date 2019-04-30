@@ -36,22 +36,42 @@ Wick.View.Selection = class extends Wick.View {
     render () {
         var project = this.model.project;
 
-        this.paper.selection.finish();
-        this.paper.selection = new this.paper.Selection({
+        this.paper.selection.clear();
+        this._getPaperItemsOfSelectedObjects().forEach(view => {
+            this.paper.selection.selectItem(view);
+        });
+
+        this.paper.selection._render();
+
+        /*this.paper.selection = new this.paper.Selection({
+            transformation: {
+                x: this.model.transformation.x,
+                y: this.model.transformation.y,
+                scaleX: this.model.transformation.scaleX,
+                scaleY: this.model.transformation.scaleY,
+                rotation: this.model.transformation.rotation,
+            },
             items: this._getViewsOfSelectedObjects(),
             layer: this._layer,
+        });*/
+    }
+
+    /**
+     *
+     */
+    applyChanges () {
+        this.model.clear();
+        this.paper.selection.items.forEach(item => {
+            console.log(item)
+            if(!item.data.wickUUID) {
+                console.warn('paper.selection had a non-wick object selected');
+            } else {
+                this.model.select(Wick.ObjectCache.getObjectByUUID(item.data.wickUUID))
+            }
         });
     }
 
-    selectionDidChange () {
-        var newSelectedItems = this._getViewsOfSelectedObjects();
-        var oldSelectedItems = this.paper.selection.items;
-
-        return (newSelectedItems.length === 0 && oldSelectedItems.length === 0)
-            || !this._arraysEqual(newSelectedItems, oldSelectedItems);
-    }
-
-    _getViewsOfSelectedObjects () {
+    _getPaperItemsOfSelectedObjects () {
         var project = this.model.project;
 
         var items = [];
@@ -62,22 +82,5 @@ Wick.View.Selection = class extends Wick.View {
             return clip.view.group;
         }));
         return items;
-    }
-
-    // https://stackoverflow.com/questions/3115982/how-to-check-if-two-arrays-are-equal-with-javascript
-    _arraysEqual(a, b) {
-        if (a === b) return true;
-        if (a == null || b == null) return false;
-        if (a.length != b.length) return false;
-
-        // If you don't care about the order of the elements inside
-        // the array, you should sort both arrays here.
-        // Please note that calling sort on an array will modify that array.
-        // you might want to clone your array first.
-
-        for (var i = 0; i < a.length; ++i) {
-            if (a[i] !== b[i]) return false;
-        }
-        return true;
     }
 }

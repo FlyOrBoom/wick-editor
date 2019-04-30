@@ -121,34 +121,26 @@ Wick.Tools.Cursor = class extends Wick.Tool {
             // We clicked something that was already selected.
             // Shift click: Deselect that item
             if(e.modifiers.shift) {
-                var itemsWithoutHitItem = this.paper.selection.items.filter(item => {
-                    return item !== hitResult.item;
-                });
-                this.fireEvent('selectionChanged', {
-                    items: itemsWithoutHitItem,
-                });
+                this.paper.selection.deselectItem(hitResult.item);
+                this.fireEvent('canvasModified');
             }
         } else if (this.hitResult.item && this.hitResult.type === 'fill') {
             // Clicked an item: select that item
-            var items = [this.hitResult.item];
             // Shift click? Keep everything else selected.
-            if(e.modifiers.shift) items = items.concat(this.paper.selection.items);
-            this.fireEvent('selectionChanged', {
-                items: items,
-            });
+            if(!e.modifiers.shift) {
+                this.paper.selection.clear();
+            }
+            this.paper.selection.selectItem(this.hitResult.item);
+            this.fireEvent('canvasModified');
         } else if (this.hitResult.item && this.hitResult.type === 'curve') {
             // Clicked a curve, start dragging it
             this.draggingCurve = this.hitResult.location.curve;
         } else if (this.hitResult.item && this.hitResult.type === 'segment') {
 
         } else {
-            if(this.paper.selection.items.length > 1) {
+            if(this.paper.selection.items.length > 0) {
                 // Nothing was clicked, so clear the selection and start a new selection box
-                this.paper.selection.finish();
-
-                this.fireEvent('selectionChanged', {
-                    items: [],
-                });
+                this.paper.selection.clear();
                 this.fireEvent('canvasModified');
             }
 
@@ -207,16 +199,11 @@ Wick.Tools.Cursor = class extends Wick.Tool {
             this.selectionBox.mode = e.modifiers.alt ? 'contains' : 'intersects';
             this.selectionBox.end(e.point);
 
-            this.fireEvent('selectionChanged', {
-                items: this.selectionBox.items
+            this.selectionBox.items.forEach(item => {
+                this.paper.selection.selectItem(item);
             });
-        } else {
-            if(this.paper.selection.items.length > 0) {
-                this.fireEvent('selectionTransformed');
-            } else {
-                this.fireEvent('canvasModified');
-            }
         }
+        this.fireEvent('canvasModified');
     }
 
     _updateHitResult (e) {

@@ -62,19 +62,6 @@ Wick.Base = class {
     }
 
     /**
-     * Parses serialized data representing Base Objects which have been serialized using the serialize function of their class.
-     * @param  {object} data Serialized data that was returned by a Base Object's serialize function.
-     */
-    deserialize (data) {
-        this._childrenUUIDs = [];
-
-        this._uuid = data.uuid;
-        this._identifier = data.identifier;
-
-        this._childrenUUIDs = Array.from(data.children);
-    }
-
-    /**
      * Call this if you deserialized a project from a .wick file before the ObjectCache has anything in it.
      */
     attachParentReferences () {
@@ -87,7 +74,8 @@ Wick.Base = class {
     }
 
     /**
-     * Converts this Wick Base object into a generic object contianing raw data (no references).
+     * Converts this Wick Base object into a generic javascript object contianing raw data (no references).
+     * @param {object} args - options for serialization (currently not used for anything.)
      * @return {object} Plain JavaScript object representing this Wick Base object.
      */
     serialize (args) {
@@ -99,6 +87,19 @@ Wick.Base = class {
         data.uuid = this._uuid;
         data.children = Array.from(this._childrenUUIDs);
         return data;
+    }
+
+    /**
+     * Parses serialized data representing Base Objects which have been serialized using the serialize function of their class.
+     * @param {object} data Serialized data that was returned by a Base Object's serialize function.
+     */
+    deserialize (data) {
+        this._childrenUUIDs = [];
+
+        this._uuid = data.uuid;
+        this._identifier = data.identifier;
+
+        this._childrenUUIDs = Array.from(data.children);
     }
 
     /**

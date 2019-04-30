@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Paper.js Selection Demo</title>
+        <script src="../../../lib/paper.js"></script>
+        <script src="Paper.Selection.js"></script>
+        <style>
+            body {
+                background-color: gray;
+            }
+            #paper-canvas {
+                background-color: white;
+            }
+        </style>
+    </head>
+
+    <script>
+        window.onload = function () {
+            paper.setup(document.getElementById('paper-canvas'));
+            for(var i = 0; i < 20; i++) {
+                var rect = new paper.Path.Ellipse({
+                    center: new paper.Point(Math.random()*500, Math.random()*500),
+                    radius: Math.random() * 20 + 40,
+                    fillColor: 'red',
+                    strokeColor: 'black',
+                });
+                window['rect' + i] = rect;
+            }
+            paper.selection = new paper.Selection({
+                layer: paper.activeLayer,
+            });
+        }
+    </script>
+
+    <body>
+        <canvas id="paper-canvas" width="500" height="500"></canvas>
+    </body>
+</html>
