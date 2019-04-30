@@ -54,26 +54,27 @@ paper.Selection = class {
      * Create a new selection.
      * Arguments:
      *  - layer: the layer to add the selection GUI to
-     *  - items: the items to select
-     *  - transformation: the initial transformation of the selection box
      * @param {object} args - Arguments for the selection.
      */
     constructor (args) {
         args = args || {};
 
-        this._layer = args.layer || paper.project.activeLayer;
-        this._items = args.items || [];
-        this._box = new paper.Group();
-        this._pivotPoint = new paper.Point();
-        this._transform = args.transformation || {
+        this.layer = args.layer || paper.project.activeLayer;
+        this.items = [];
+        this.box = new paper.Group();
+        this.pivotPoint = new paper.Point();
+
+        this.width = 0;
+        this.height = 0;
+        this.transform = {
             x: 0,
             y: 0,
             scaleX: 1.0,
             scaleY: 1.0,
             rotation: 0,
         };
-        this._handleDragMode = 'scale';
-        this._lockScalingToAspectRatio = false;
+        this.handleDragMode = 'scale';
+        this.lockScalingToAspectRatio = false;
     }
 
     /**
@@ -107,33 +108,8 @@ paper.Selection = class {
     /**
      *
      */
-    get box () {
-        return this._box;
-    }
-
-    /**
-     *
-     */
-    get items () {
-        return this._items;
-    }
-
-    /**
-     * The point that all transformations will use as their origin.
-     */
-    get pivotPoint () {
-      return this._pivotPoint;
-    }
-
-    set pivotPoint (pivotPoint) {
-        this._pivotPoint = pivotPoint;
-    }
-
-    /**
-     *
-     */
     clear () {
-        this._items = [];
+        this.items = [];
     }
 
     /**
@@ -141,7 +117,7 @@ paper.Selection = class {
      * @param {Item} item - the item to check selection of
      */
     isItemSelected (item) {
-        return this._items.indexOf(item) > -1;
+        return this.items.indexOf(item) > -1;
     }
 
     /**
@@ -150,7 +126,7 @@ paper.Selection = class {
      */
     selectItem (item) {
         if(!this.isItemSelected(item)) {
-            this._items.push(item);
+            this.items.push(item);
         }
     }
 
@@ -159,33 +135,41 @@ paper.Selection = class {
      * @param {Item} item - the item to deselect
      */
     deselectItem (item) {
-        this._items = this._items.filter(seekItem => {
+        this.items = this.items.filter(seekItem => {
             return seekItem !== item;
         });
     }
 
-    _render () {
+    _render (args) {
         // Recalculate bounds, we need this to generate the new box GUI
-        this._bounds = this._boundsOfItems(this._items);
+        this._bounds = new paper.Rectangle({
+            x: args.x,
+            y: args.y,
+            width: args.width,
+            height: args.height,
+        });
+        //this._boundsOfItems(this.items);
 
+        /*
         // Default pivot point is the center of all items.
-        this._pivotPoint = this._bounds.center;
+        this.pivotPoint = this._bounds.center;
 
-        if(this._items.length === 1) {
-            var item = this._items[0];
+        if(this.items.length === 1) {
+            var item = this.items[0];
 
             // Single item: Use the origin as the pivot point if its a group.
             if(item instanceof paper.Group || item instanceof paper.Raster) {
-                this._pivotPoint = item.position;
+                this.pivotPoint = item.position;
             }
 
             // Single item: Use that item's transformations as the selection's transformations
             // TODO
         }
+        */
 
         // Regen box GUI
-        this._box.remove();
-        this._box = this._generateBox();
+        this.box.remove();
+        this.box = this._generateBox();
     }
 
     _generateBox () {
@@ -194,7 +178,7 @@ paper.Selection = class {
         // No items - don't even put anything in the box, we don't need to
         if(this.items.length === 0) return box;
 
-        this._layer.addChild(box);
+        this.layer.addChild(box);
 
         box.addChild(this._generateBorder());
         if(this.items.length > 1) {
@@ -234,13 +218,12 @@ paper.Selection = class {
             strokeColor: paper.Selection.BOX_STROKE_COLOR,
             insert: false,
         });
-        console.log(border)
         border.data.isBorder = true;
         return border;
     }
 
     _generatePathOutlines () {
-        return this._items.filter(item => {
+        return this.items.filter(item => {
             return item instanceof paper.Path ||
                    item instanceof paper.CompoundPath;
         }).map(item => {
@@ -257,7 +240,7 @@ paper.Selection = class {
     }
 
     _generateGroupOutlines () {
-        return this._items.filter(item => {
+        return this.items.filter(item => {
             return item instanceof paper.Group ||
                    item instanceof paper.Raster;
         }).map(item => {
@@ -287,7 +270,7 @@ paper.Selection = class {
         return this._generateHandle(
             'pivot',
             'pivot',
-            this._pivotPoint,
+            this.pivotPoint,
             paper.Selection.PIVOT_FILL_COLOR,
             paper.Selection.PIVOT_STROKE_COLOR,
         );
@@ -304,8 +287,8 @@ paper.Selection = class {
         });
         // Transform the handle a bit so it doesn't get squished when the selection box is scaled.
         circle.applyMatrix = false;
-        circle.scaling.x = 1/this._transform.scaleX;
-        circle.scaling.y = 1/this._transform.scaleY;
+        circle.scaling.x = 1/this.transform.scaleX;
+        circle.scaling.y = 1/this.transform.scaleY;
         circle.data.handleType = type;
         circle.data.handleEdge = name;
         return circle;
@@ -330,28 +313,16 @@ paper.Selection = class {
             'bottomLeft': 180,
             'topLeft': 270,
         }[cornerName]);
-        if(this._transform.scaleX < 0) hotspot.scaling.x = -1;
-        if(this._transform.scaleY < 0) hotspot.scaling.y = -1;
+        if(this.transform.scaleX < 0) hotspot.scaling.x = -1;
+        if(this.transform.scaleY < 0) hotspot.scaling.y = -1;
         hotspot.data.handleType = 'rotation';
         hotspot.data.handleEdge = cornerName;
 
         // Transform the hotspots a bit so they doesn't get squished when the selection box is scaled.
-        hotspot.scaling.x = 1/this._transform.scaleX;
-        hotspot.scaling.y = 1/this._transform.scaleY;
+        hotspot.scaling.x = 1/this.transform.scaleX;
+        hotspot.scaling.y = 1/this.transform.scaleY;
 
         return hotspot;
-    }
-
-    _boundsOfItems (items) {
-        if(items.length === 0)
-            return new paper.Rectangle();
-
-        var bounds = null;
-        items.forEach(item => {
-            bounds = bounds ? bounds.unite(item.bounds) : item.bounds;
-        });
-
-        return bounds;
     }
 }
 

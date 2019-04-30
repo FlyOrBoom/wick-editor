@@ -114,6 +114,37 @@ describe('Wick.Selection', function() {
         expect(project.selection.getSelectedObjects()).to.eql([]);
     });
 
+    it('should calculate bounds correctly', function () {
+        var project = new Wick.Project();
+
+        var path1 = TestUtils.paperToWickPath(new paper.Path.Rectangle({
+            from: new paper.Point(0,0),
+            to: new paper.Point(50,50),
+            fillColor: 'red',
+        }));
+        project.activeFrame.addPath(path1);
+
+        var path2 = TestUtils.paperToWickPath(new paper.Path.Rectangle({
+            from: new paper.Point(50,0),
+            to: new paper.Point(100,50),
+            fillColor: 'green',
+        }));
+        project.activeFrame.addPath(path2);
+
+        var path3 = TestUtils.paperToWickPath(new paper.Path.Rectangle({
+            from: new paper.Point(50,50),
+            to: new paper.Point(100,100),
+            fillColor: 'blue',
+        }));
+        project.activeFrame.addPath(path3);
+
+        project.selection.select(path1);
+        project.selection.view.render();
+
+        expect(project.selection.width).to.equal(50);
+    });
+
+/*
     it('should update transforms of selection (one path)', function () {
         var project = new Wick.Project();
 
@@ -223,7 +254,8 @@ describe('Wick.Selection', function() {
         expect(project.selection.center.y).to.be.closeTo(50, 0.01);
         expect(project.selection.identifier).to.equal('foo');
     });
-
+*/
+/*
     it('should update sound of a selected frame', function () {
         var project = new Wick.Project();
 
@@ -238,4 +270,5 @@ describe('Wick.Selection', function() {
         project.selection.sound = sound1;
         expect(project.activeFrame.sound).to.equal(sound1);
     });
+*/
 });

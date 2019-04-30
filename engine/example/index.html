@@ -146,6 +146,19 @@
   window.onload = () => {
     var project = new Wick.Project();
 
+    for(var i = 0; i < 20; i++) {
+        var rect = new paper.Path.Ellipse({
+            center: new paper.Point(Math.random()*500, Math.random()*500),
+            radius: Math.random() * 20 + 40,
+            fillColor: 'red',
+            strokeColor: 'black',
+            insert: false
+        });
+        var json = rect.exportJSON({asString:false});
+        var path = new Wick.Path({json:json});
+        project.activeFrame.addPath(path);
+    }
+
     window.project = project;
     console.log('Access the engine through the console with "window.project".');
 

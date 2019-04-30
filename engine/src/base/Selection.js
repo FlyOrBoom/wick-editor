@@ -36,8 +36,14 @@ Wick.Selection = class extends Wick.Base {
         if(!args) args = {};
         super(args);
 
-        this._selectedObjectsUUIDs = args.selectedObjects || [];
-        this.transformation = args.transformation || new Wick.Transformation();
+        this._selectedObjectsUUIDs = [];
+        this.x = null;
+        this.y = null;
+        this.width = null;
+        this.height = null;
+        this.scaleX = null;
+        this.scaleY = null;
+        this.rotation = null;
     }
 
     /**
@@ -48,7 +54,6 @@ Wick.Selection = class extends Wick.Base {
     serialize (args) {
         var data = super.serialize(args);
         data.selectedObjects = Array.from(this._selectedObjectsUUIDs);
-        data.transformation = this.transformation.value;
         return data;
     }
 
@@ -59,7 +64,6 @@ Wick.Selection = class extends Wick.Base {
     deserialize (data) {
         super.deserialize(data);
         this._selectedObjectsUUIDs = data.selectedObjects || [];
-        this.transformation = new Wick.Transformation(data.transformation);
     }
 
     get classname () {
@@ -194,6 +198,19 @@ Wick.Selection = class extends Wick.Base {
      */
     get numObjects () {
         return this._selectedObjectsUUIDs.length;
+    }
+
+    /**
+     *
+     */
+    resetTransformations () {
+        this.x = null;
+        this.y = null;
+        this.width = null;
+        this.height = null;
+        this.scaleX = null;
+        this.scaleY = null;
+        this.rotation = null;
     }
 
     _locationOf (object) {

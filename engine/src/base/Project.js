@@ -613,7 +613,7 @@ Wick.Project = class extends Wick.Base {
         this.view.render();
         this.activeTimeline.guiElement.numberLine.playhead.build();
 
-        this._keysLastDown = [].concat(this._keysDown);//!!!!!!!!!!!!!!!
+        this._keysLastDown = [].concat(this._keysDown);
 
         return error;
     }
