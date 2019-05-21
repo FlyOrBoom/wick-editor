@@ -66924,11 +66924,13 @@ Wick.Project = class extends Wick.Base {
 
 
   get root() {
+    if (this._cachedRoot) return this._cachedRoot;
     var root = this.children.find(child => {
       return child instanceof Wick.Clip;
     }); // Force the root clip to have the identifier "Project".
 
     if (root) root.identifier = 'Project';
+    this._cachedRoot = root;
     return root;
   }
 
@@ -67662,7 +67664,7 @@ Wick.Selection = class extends Wick.Base {
 
 
   clear(filter) {
-    this.project.selection.getSelectedObjects(filter).forEach(object => {
+    this.getSelectedObjects(filter).forEach(object => {
       this.deselect(object);
     });
   }
@@ -69370,9 +69372,14 @@ Wick.SoundAsset = class extends Wick.FileAsset {
 * along with Wick Engine.  If not, see <https://www.gnu.org/licenses/>.
 */
 GlobalAPI = class {
+  static get API_MEMBER_NAMES() {
+    return ['stop', 'play', 'gotoAndStop', 'gotoAndPlay', 'gotoNextFrame', 'gotoPrevFrame', 'project', 'root', 'parent', 'parentObject', 'isMouseDown', 'key', 'keys', 'isKeyDown', 'keyIsDown', 'isKeyJustPressed', 'keyIsJustPressed', 'mouseX', 'mouseY', 'mouseMoveX', 'mouseMoveY', 'random', 'playSound', 'stopAllSounds', 'onEvent'];
+  }
   /**
    * @param {object} scriptOwner The tickable object which owns the script being evaluated.
    */
+
+
   constructor(scriptOwner) {
     this.scriptOwner = scriptOwner;
   }
@@ -69383,11 +69390,7 @@ GlobalAPI = class {
 
 
   get apiMemberNames() {
-    var allNames = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
-    var names = allNames.filter(name => {
-      return ['constructor', 'apiMemberNames', 'apiMembers'].indexOf(name) === -1;
-    });
-    return names;
+    return GlobalAPI.API_MEMBER_NAMES;
   }
   /**
    * Returns a list of api members bound to the script owner.
@@ -69396,17 +69399,20 @@ GlobalAPI = class {
 
 
   get apiMembers() {
-    var members = this.apiMemberNames.map(name => {
-      return this[name];
-    });
-    var boundFunctions = members.map(fn => {
+    var members = [];
+    this.apiMemberNames.forEach(name => {
+      var fn = this[name];
+
       if (fn instanceof Function) {
-        return fn.bind(this);
-      } else {
-        return fn;
+        fn = fn.bind(this);
       }
+
+      members.push({
+        name: name,
+        fn: fn
+      });
     });
-    return boundFunctions;
+    return members;
   }
   /**
    * Stops the timeline of the object's parent clip.
@@ -69744,6 +69750,7 @@ Wick.Tickable = class extends Wick.Base {
     this.cursor = 'default';
     this.addScript('default', '');
     this._onEventFns = {};
+    this._cachedScriptFns = {};
   }
 
   deserialize(data) {
@@ -69755,6 +69762,7 @@ Wick.Tickable = class extends Wick.Base {
     this._scripts = JSON.parse(JSON.stringify(data.scripts));
     this.cursor = data.cursor;
     this._onEventFns = {};
+    this._cachedScriptFns = {};
   }
 
   serialize(args) {
@@ -69921,6 +69929,7 @@ Wick.Tickable = class extends Wick.Base {
 
   updateScript(name, src) {
     this.getScript(name).src = src;
+    delete this._cachedScriptFns[name];
   }
   /**
    * Remove the script that corresponds to a given event name.
@@ -69946,9 +69955,17 @@ Wick.Tickable = class extends Wick.Base {
     } // Load API
 
 
-    var api = new GlobalAPI(this);
+    var globalAPI = new GlobalAPI(this);
     var otherObjects = this.parentClip ? this.parentClip.activeNamedChildren : [];
-    var otherObjectNames = otherObjects.map(obj => obj.identifier); // Run the functions attached using onEvent
+    var api = {};
+    globalAPI.apiMembers.forEach(member => {
+      api[member.name] = member.fn;
+      window[member.name] = member.fn;
+    });
+    otherObjects.forEach(otherObject => {
+      api[otherObject.identifier] = otherObject;
+      window[otherObject.identifier] = otherObject;
+    }); // Run the functions attached using onEvent
 
     var onEventFnError = null;
     this.getEventFns(name).forEach(eventFn => {
@@ -69956,9 +69973,9 @@ Wick.Tickable = class extends Wick.Base {
 
       try {
         var eventFnSrc = '(' + eventFn.toString() + ').bind(this)();';
-        var fn = new Function(api.apiMemberNames.concat(otherObjectNames), eventFnSrc);
+        var fn = new Function('api', eventFnSrc);
         fn = fn.bind(this);
-        fn(...api.apiMembers, ...otherObjects);
+        fn(api);
       } catch (e) {
         // Catch runtime errors
         onEventFnError = this._generateErrorInfo(e, name);
@@ -69976,27 +69993,35 @@ Wick.Tickable = class extends Wick.Base {
       return null;
     }
 
-    var script = this.getScript(name); // Check for syntax/parsing errors
+    if (!this._cachedScriptFns) this._cachedScriptFns = {};
+    var fn = this._cachedScriptFns[name];
 
-    try {
-      esprima.parseScript(script.src);
-    } catch (e) {
-      return this._generateEsprimaErrorInfo(e, name);
-    } // Attempt to create valid function...
+    if (!fn) {
+      var script = this.getScript(name); // Check for syntax/parsing errors
 
+      /*
+      try {
+          esprima.parseScript(script.src)
+      } catch (e) {
+          return this._generateEsprimaErrorInfo(e, name);
+      }
+      */
+      // Attempt to create valid function...
 
-    try {
-      var fn = new Function(api.apiMemberNames.concat(otherObjectNames), script.src);
-      fn = fn.bind(this);
-    } catch (e) {
-      // This should almost never be thrown unless there is an attempt to use syntax
-      // that the syntax checker (esprima) does not understand.
-      return this._generateErrorInfo(e, name);
+      try {
+        fn = new Function('api', script.src);
+        fn = fn.bind(this);
+        this._cachedScriptFns[name] = fn;
+      } catch (e) {
+        // This should almost never be thrown unless there is an attempt to use syntax
+        // that the syntax checker (esprima) does not understand.
+        return this._generateErrorInfo(e, name);
+      }
     } // Run the function
 
 
     try {
-      fn(...api.apiMembers, ...otherObjects);
+      fn(api);
     } catch (e) {
       // Catch runtime errors
       return this._generateErrorInfo(e, name);
@@ -70147,12 +70172,14 @@ Wick.Tickable = class extends Wick.Base {
   }
 
   _generateErrorInfo(error, name) {
-    return {
+    var errorMessage = {
       name: name !== undefined ? name : '',
       lineNumber: this._generateLineNumberFromStackTrace(error.stack),
       message: error.message,
       uuid: this.uuid
     };
+    console.error(errorMessage);
+    return errorMessage;
   }
 
   _attachChildClipReferences() {// Implemented by Wick.Clip and Wick.Frame.

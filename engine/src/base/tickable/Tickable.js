@@ -65,6 +65,7 @@ Wick.Tickable = class extends Wick.Base {
         this.addScript('default', '');
 
         this._onEventFns = {};
+        this._cachedScriptFns = {};
     }
 
     deserialize (data) {
@@ -80,6 +81,7 @@ Wick.Tickable = class extends Wick.Base {
         this.cursor = data.cursor;
 
         this._onEventFns = {};
+        this._cachedScriptFns = {};
 
     }
 
@@ -232,6 +234,7 @@ Wick.Tickable = class extends Wick.Base {
      */
     updateScript (name, src) {
         this.getScript(name).src = src;
+        delete this._cachedScriptFns[name];
     }
 
     /**
@@ -250,14 +253,23 @@ Wick.Tickable = class extends Wick.Base {
      * @returns {object} object containing error info if an error happened. Returns null if there was no error (script ran successfully)
      */
     runScript (name) {
+        return;
+
         if(!Wick.Tickable.possibleScripts.indexOf(name) === -1) {
             console.error(name + ' is not a valid script!');
         }
 
         // Load API
-        var api = new GlobalAPI(this);
+        var globalAPI = new GlobalAPI(this);
         var otherObjects = this.parentClip ? this.parentClip.activeNamedChildren : [];
-        var otherObjectNames = otherObjects.map(obj => obj.identifier);
+
+        var api = {};
+        globalAPI.apiMembers.forEach(member => {
+            api[member.name] = member.fn;
+        });
+        otherObjects.forEach(otherObject => {
+            api[otherObject.identifier] = otherObject;
+        });
 
         // Run the functions attached using onEvent
         var onEventFnError = null;
@@ -265,9 +277,9 @@ Wick.Tickable = class extends Wick.Base {
             if(onEventFnError) return;
             try {
                 var eventFnSrc = '(' + eventFn.toString() + ').bind(this)();';
-                var fn = new Function(api.apiMemberNames.concat(otherObjectNames), eventFnSrc);
+                var fn = new Function('api', eventFnSrc);
                 fn = fn.bind(this);
-                fn(...api.apiMembers, ...otherObjects);
+                fn(api);
             } catch (e) {
                 // Catch runtime errors
                 onEventFnError = this._generateErrorInfo(e, name);
@@ -286,28 +298,35 @@ Wick.Tickable = class extends Wick.Base {
             return null;
         }
 
-        var script = this.getScript(name);
+        if(!this._cachedScriptFns) this._cachedScriptFns = {};
+        var fn = this._cachedScriptFns[name];
+        if(!fn) {
+            var script = this.getScript(name);
 
-        // Check for syntax/parsing errors
-        try {
-            esprima.parseScript(script.src)
-        } catch (e) {
-            return this._generateEsprimaErrorInfo(e, name);
-        }
+            // Check for syntax/parsing errors
+            /*
+            try {
+                esprima.parseScript(script.src)
+            } catch (e) {
+                return this._generateEsprimaErrorInfo(e, name);
+            }
+            */
 
-        // Attempt to create valid function...
-        try {
-            var fn = new Function(api.apiMemberNames.concat(otherObjectNames), script.src);
-            fn = fn.bind(this);
-        } catch (e) {
-            // This should almost never be thrown unless there is an attempt to use syntax
-            // that the syntax checker (esprima) does not understand.
-            return this._generateErrorInfo(e, name);
+            // Attempt to create valid function...
+            try {
+                fn = new Function('api', script.src);
+                fn = fn.bind(this);
+                this._cachedScriptFns[name] = fn;
+            } catch (e) {
+                // This should almost never be thrown unless there is an attempt to use syntax
+                // that the syntax checker (esprima) does not understand.
+                return this._generateErrorInfo(e, name);
+            }
         }
 
         // Run the function
         try {
-            fn(...api.apiMembers, ...otherObjects);
+            fn(api);
         } catch (e) {
             // Catch runtime errors
             return this._generateErrorInfo(e, name);
@@ -467,12 +486,14 @@ Wick.Tickable = class extends Wick.Base {
     }
 
     _generateErrorInfo (error, name) {
-        return {
+        var errorMessage = {
             name: name !== undefined ? name : '',
             lineNumber: this._generateLineNumberFromStackTrace(error.stack),
             message: error.message,
             uuid: this.uuid,
         }
+        //console.error(errorMessage)
+        return errorMessage;
     }
 
     _attachChildClipReferences () {

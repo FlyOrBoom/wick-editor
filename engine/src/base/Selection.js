@@ -124,7 +124,7 @@ Wick.Selection = class extends Wick.Base {
      * @param {string} filter - A location or a type (see SELECTABLE_OBJECT_TYPES and LOCATION_NAMES)
      */
     clear (filter) {
-        this.project.selection.getSelectedObjects(filter).forEach(object => {
+        this.getSelectedObjects(filter).forEach(object => {
             this.deselect(object);
         });
     }

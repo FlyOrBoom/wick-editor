@@ -18,6 +18,36 @@
  */
 
 GlobalAPI = class {
+    static get API_MEMBER_NAMES () {
+        return [
+            'stop',
+            'play',
+            'gotoAndStop',
+            'gotoAndPlay',
+            'gotoNextFrame',
+            'gotoPrevFrame',
+            'project',
+            'root',
+            'parent',
+            'parentObject',
+            'isMouseDown',
+            'key',
+            'keys',
+            'isKeyDown',
+            'keyIsDown',
+            'isKeyJustPressed',
+            'keyIsJustPressed',
+            'mouseX',
+            'mouseY',
+            'mouseMoveX',
+            'mouseMoveY',
+            'random',
+            'playSound',
+            'stopAllSounds',
+            'onEvent',
+        ];
+    }
+
     /**
      * @param {object} scriptOwner The tickable object which owns the script being evaluated.
      */
@@ -30,11 +60,7 @@ GlobalAPI = class {
      * @returns {string[]} All global API member names
      */
     get apiMemberNames () {
-        var allNames = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
-        var names = allNames.filter(name => {
-            return ['constructor', 'apiMemberNames', 'apiMembers'].indexOf(name) === -1;
-        });
-        return names;
+        return GlobalAPI.API_MEMBER_NAMES;
     }
 
     /**
@@ -42,19 +68,18 @@ GlobalAPI = class {
      * @returns {object[]} Array of functions, properties, and api members.
      */
     get apiMembers () {
-        var members = this.apiMemberNames.map(name => {
-            return this[name];
-        });
-
-        var boundFunctions = members.map(fn => {
+        var members = [];
+        this.apiMemberNames.forEach(name => {
+            var fn = this[name];
             if(fn instanceof Function) {
-                return fn.bind(this);
-            } else {
-                return fn;
+                fn = fn.bind(this);
             }
+            members.push({
+                name: name,
+                fn: fn,
+            });
         });
-
-        return boundFunctions;
+        return members;
     }
 
     /**
