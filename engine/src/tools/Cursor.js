@@ -105,6 +105,17 @@ Wick.Tools.Cursor = class extends Wick.Tool {
             this.hoverPreview.add(new this.paper.Point(this.hitResult.location.curve.point2));
             this.hoverPreview.segments[0].handleOut = this.hitResult.location.curve.handle1;
             this.hoverPreview.segments[1].handleIn = this.hitResult.location.curve.handle2;
+        } else if (this.hitResult.type === 'fill' && !this.hitResult.item.data.isSelectionBoxGUI) {
+            var clip = this._wickObjectFromPaperItem(this.hitResult.item);
+            if(clip && clip.identifier) {
+                this.hoverPreview = new this.paper.PointText({
+                    fontSize: 12,
+                    fillColor: '#3355ff',
+                    content: clip.identifier,
+                });
+                this.hoverPreview.pivot = new paper.Point(0,0);
+                this.hoverPreview.position = e.point.add(new paper.Point(20,20));
+            }
         }
         this.hoverPreview.data.wickType = 'gui';
     }
